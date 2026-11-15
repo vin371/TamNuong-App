@@ -1,0 +1,146 @@
+name: Android CI/CD
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_VERSION: '8.9'
+
+jobs:
+  test:
+    name: Kiểm thử + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+
+      - name: Chạy unit test (âm lịch, giờ báo)
+        run: gradle --no-daemon --stacktrace :app:testDebugUnitTest
+
+      - name: Lint
+        run: gradle --no-daemon :app:lintDebug
+
+      - name: Lưu báo cáo test và lint
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bao-cao
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+
+  build:
+    name: Dựng APK
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+
+      - name: Đặt số phiên bản
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "TN_VERSION_NAME=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "TN_VERSION_NAME=1.0.${GITHUB_RUN_NUMBER}-dev" >> "$GITHUB_ENV"
+          fi
+          echo "TN_VERSION_CODE=$((GITHUB_RUN_NUMBER + 1))" >> "$GITHUB_ENV"
+
+      - name: Chuẩn bị khoá ký phát hành
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            {
+              echo "TN_KEYSTORE_FILE=$RUNNER_TEMP/release.jks"
+              echo "TN_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+              echo "TN_KEY_ALIAS=$KEY_ALIAS"
+              echo "TN_KEY_PASSWORD=$KEY_PASSWORD"
+            } >> "$GITHUB_ENV"
+            echo "Ký bằng khoá phát hành."
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "::error::Chưa có secret KEYSTORE_BASE64 – không thể phát hành bản cài đặt có chữ ký ổn định. Xem README, mục 'Cài secrets'."
+            exit 1
+          else
+            echo "::warning::Chưa có secret khoá ký – bản dựng này ký bằng khoá debug (chỉ để thử)."
+          fi
+
+      - name: Dựng APK release
+        run: gradle --no-daemon --stacktrace :app:assembleRelease
+
+      - name: Kiểm tra chữ ký
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+          cp app/build/outputs/apk/release/app-release.apk BaoTamNuong.apk
+          sha256sum BaoTamNuong.apk | tee BaoTamNuong.apk.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BaoTamNuong-apk
+          path: |
+            BaoTamNuong.apk
+            BaoTamNuong.apk.sha256
+
+  release:
+    name: Phát hành
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: BaoTamNuong-apk
+
+      - name: Tạo file lịch .ics (5 năm tới)
+        run: python3 tools/tao_lich_ics.py Ngay_Tam_Nuong_7h_17h.ics 5
+
+      - name: Tạo GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Báo Tam Nương ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            **Tải thẳng về Android:** https://github.com/${{ github.repository }}/releases/latest/download/BaoTamNuong.apk
+
+            Mở file, cho phép "Cài từ nguồn này", rồi mở ứng dụng và làm các mục ✅.
+          files: |
+            BaoTamNuong.apk
+            BaoTamNuong.apk.sha256
+            Ngay_Tam_Nuong_7h_17h.ics

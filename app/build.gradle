@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Phiên bản và khoá ký lấy từ biến môi trường (GitHub Actions đặt sẵn).
+def env = System.getenv()
+def keystoreFile = env['TN_KEYSTORE_FILE']
+
+android {
+    namespace 'vn.tamnuong.baothuc'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'vn.tamnuong.baothuc'
+        minSdk 21
+        // Giữ 30: cài ngoài CH Play vẫn được báo thức chính xác + hiện toàn màn hình mà không cần xin thêm quyền.
+        targetSdk 30
+        versionCode((env['TN_VERSION_CODE'] ?: '1') as int)
+        versionName env['TN_VERSION_NAME'] ?: '1.0-dev'
+    }
+
+    signingConfigs {
+        release {
+            if (keystoreFile) {
+                storeFile file(keystoreFile)
+                storePassword env['TN_KEYSTORE_PASSWORD']
+                keyAlias env['TN_KEY_ALIAS']
+                keyPassword env['TN_KEY_PASSWORD']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // Không có khoá phát hành (máy cá nhân, pull request) thì ký bằng khoá debug.
+            signingConfig keystoreFile ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+        htmlReport true
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}

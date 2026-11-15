@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Biểu tượng: tờ lịch trắng trên nền đỏ, khoen treo, chữ "TN" -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path android:fillColor="#B8141C"
+        android:pathData="M126,16h260a110,110 0,0 1,110 110v260a110,110 0,0 1,-110 110h-260a110,110 0,0 1,-110 -110v-260a110,110 0,0 1,110 -110z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M136,120h240a36,36 0,0 1,36 36v228a36,36 0,0 1,-36 36h-240a36,36 0,0 1,-36 -36v-228a36,36 0,0 1,36 -36z"/>
+    <path android:fillColor="#F2B705"
+        android:pathData="M136,120h240a36,36 0,0 1,36 36v40h-312v-40a36,36 0,0 1,36 -36z"/>
+    <path android:fillColor="#5A5A5A"
+        android:pathData="M180,84a14,14 0,0 1,14 14v48a14,14 0,0 1,-28 0v-48a14,14 0,0 1,14 -14zM332,84a14,14 0,0 1,14 14v48a14,14 0,0 1,-28 0v-48a14,14 0,0 1,14 -14z"/>
+    <!-- T -->
+    <path android:fillColor="#B8141C" android:pathData="M132,240h120v32h-44v100h-32v-100h-44z"/>
+    <!-- N -->
+    <path android:fillColor="#B8141C" android:pathData="M272,240h32l56,84v-84h32v132h-32l-56,-84v84h-32z"/>
+</vector>
