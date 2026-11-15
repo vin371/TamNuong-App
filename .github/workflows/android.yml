@@ -89,7 +89,8 @@ jobs:
               echo "TN_KEYSTORE_FILE=$RUNNER_TEMP/release.jks"
               echo "TN_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
               echo "TN_KEY_ALIAS=$KEY_ALIAS"
-              echo "TN_KEY_PASSWORD=$KEY_PASSWORD"
+              # Kho khoá PKCS12: mật khẩu khoá = mật khẩu kho khoá nếu không đặt riêng
+              echo "TN_KEY_PASSWORD=${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
             } >> "$GITHUB_ENV"
             echo "Ký bằng khoá phát hành."
           elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then

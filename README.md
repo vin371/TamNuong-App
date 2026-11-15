@@ -51,14 +51,14 @@ git push origin v1.0.1
 
 ### Cài secrets (bắt buộc để phát hành)
 
-Vào **Settings › Secrets and variables › Actions › New repository secret** và tạo 4 secret:
+Vào **Settings › Secrets and variables › Actions › New repository secret** và tạo các secret:
 
 | Tên | Giá trị |
 |---|---|
 | `KEYSTORE_BASE64` | Nội dung file khoá `.jks` mã hoá base64 (`base64 -w0 release.jks`) |
 | `KEYSTORE_PASSWORD` | Mật khẩu kho khoá |
 | `KEY_ALIAS` | Bí danh khoá |
-| `KEY_PASSWORD` | Mật khẩu khoá |
+| `KEY_PASSWORD` | Mật khẩu khoá (không bắt buộc – bỏ trống thì dùng `KEYSTORE_PASSWORD`) |
 
 Mọi bản phát hành phải ký cùng một khoá thì điện thoại mới cập nhật đè lên được. Không đưa file `.jks` lên repo.
 
