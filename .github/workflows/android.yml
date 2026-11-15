@@ -83,14 +83,23 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          # Bỏ khoảng trắng / chữ "Secret:" lỡ dán thừa
+          clean() { printf '%s' "$1" | tr -d '\r' | sed -e 's/^[[:space:]]*Secret:[[:space:]]*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | head -n1; }
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            # Lấy đúng đoạn base64 dài nhất, bỏ mọi chữ thừa xung quanh
+            printf '%s' "$KEYSTORE_BASE64" | tr -d ' \r\n\t' | grep -oE '[A-Za-z0-9+/]{200,}={0,2}' | head -n1 | base64 -d > "$RUNNER_TEMP/release.jks" \
+              || { echo "::error::Secret KEYSTORE_BASE64 không phải base64 hợp lệ."; exit 1; }
+            PW="$(clean "$KEYSTORE_PASSWORD")"
+            KPW="$(clean "${KEY_PASSWORD:-$KEYSTORE_PASSWORD}")"
+            ALIAS="$(clean "${KEY_ALIAS:-tn}")"
+            keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$PW" -alias "$ALIAS" >/dev/null \
+              || { echo "::error::Không mở được kho khoá: kiểm tra KEYSTORE_PASSWORD và KEY_ALIAS."; exit 1; }
+            echo "::add-mask::$PW"
             {
               echo "TN_KEYSTORE_FILE=$RUNNER_TEMP/release.jks"
-              echo "TN_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
-              echo "TN_KEY_ALIAS=$KEY_ALIAS"
-              # Kho khoá PKCS12: mật khẩu khoá = mật khẩu kho khoá nếu không đặt riêng
-              echo "TN_KEY_PASSWORD=${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
+              echo "TN_KEYSTORE_PASSWORD=$PW"
+              echo "TN_KEY_ALIAS=$ALIAS"
+              echo "TN_KEY_PASSWORD=$KPW"
             } >> "$GITHUB_ENV"
             echo "Ký bằng khoá phát hành."
           elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
