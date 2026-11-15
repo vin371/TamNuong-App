@@ -86,9 +86,14 @@ jobs:
           # Bỏ khoảng trắng / chữ "Secret:" lỡ dán thừa
           clean() { printf '%s' "$1" | tr -d '\r' | sed -e 's/^[[:space:]]*Secret:[[:space:]]*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | head -n1; }
           if [ -n "$KEYSTORE_BASE64" ]; then
-            # Lấy đúng đoạn base64 dài nhất, bỏ mọi chữ thừa xung quanh
-            printf '%s' "$KEYSTORE_BASE64" | tr -d ' \r\n\t' | grep -oE '[A-Za-z0-9+/]{200,}={0,2}' | head -n1 | base64 -d > "$RUNNER_TEMP/release.jks" \
-              || { echo "::error::Secret KEYSTORE_BASE64 không phải base64 hợp lệ."; exit 1; }
+            # Kho khoá PKCS12 mã hoá base64 luôn bắt đầu bằng "MII": lấy từ đó tới hết đoạn base64
+            B64="$(printf '%s' "$KEYSTORE_BASE64" | tr -d ' \r\n\t' | grep -oE 'MII[A-Za-z0-9+/]{100,}={0,2}' | head -n1)"
+            PW0="$(clean "$KEYSTORE_PASSWORD")"
+            # Chẩn đoán (chỉ độ dài và mã băm rút gọn, không lộ nội dung)
+            echo "KEYSTORE_BASE64: dán ${#KEYSTORE_BASE64} ký tự, lọc được ${#B64} ký tự, sha256=$(printf '%s' "$B64" | sha256sum | cut -c1-12)"
+            echo "KEYSTORE_PASSWORD: ${#PW0} ký tự, sha256=$(printf '%s' "$PW0" | sha256sum | cut -c1-12)"
+            printf '%s' "$B64" | base64 -d > "$RUNNER_TEMP/release.jks" 2>/dev/null && [ -s "$RUNNER_TEMP/release.jks" ] \
+              || { echo "::error::Secret KEYSTORE_BASE64 không đúng (lọc được ${#B64} ký tự). Hãy dán lại toàn bộ nội dung file 2_KEYSTORE_BASE64.txt."; exit 1; }
             PW="$(clean "$KEYSTORE_PASSWORD")"
             KPW="$(clean "${KEY_PASSWORD:-$KEYSTORE_PASSWORD}")"
             ALIAS="$(clean "${KEY_ALIAS:-tn}")"
