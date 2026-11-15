@@ -24,6 +24,7 @@ public class AlarmActivity extends Activity {
     private LinearLayout root;
     private final Handler h = new Handler();
     private boolean dark;
+    private VietnameseSpeech speech;
     private final Runnable blink = new Runnable() {
         public void run() {
             dark = !dark;
@@ -95,6 +96,7 @@ public class AlarmActivity extends Activity {
         });
 
         setContentView(root);
+        speech = new VietnameseSpeech(this, true, () -> {});
         fill(getIntent());
         registerReceiver(closer, new IntentFilter(Sched.ACTION_CLOSE));
         h.post(blink);
@@ -104,6 +106,9 @@ public class AlarmActivity extends Activity {
         String t = i.getStringExtra("title"), bo = i.getStringExtra("body");
         title.setText(t != null ? t : "Báo ngày Tam Nương");
         body.setText(bo != null ? bo : "");
+        String spoken = VietnameseSpeech.today();
+        if ("Ngày mai là ngày Tam Nương".equals(t)) spoken += " Ngày mai là ngày Tam Nương.";
+        speech.speakWhenReady(spoken);
     }
 
     @Override
@@ -121,6 +126,7 @@ public class AlarmActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (speech != null) speech.close();
         h.removeCallbacks(blink);
         try { unregisterReceiver(closer); } catch (Exception ignored) {}
         super.onDestroy();

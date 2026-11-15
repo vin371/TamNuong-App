@@ -1,6 +1,8 @@
 package vn.tamnuong.baothuc;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.speech.tts.Voice;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
@@ -31,6 +33,7 @@ public class MainActivity extends Activity {
     private float dp;
     private TextView wd, day, my, lunar, stamp, nextDaily, nextTest, checks, list;
     private Switch swDaily, swTest;
+    private VietnameseSpeech speech;
     private final Handler h = new Handler();
     private final Runnable tick = new Runnable() {
         public void run() {
@@ -70,6 +73,21 @@ public class MainActivity extends Activity {
             sheet.addView(t);
         }
         ((LinearLayout.LayoutParams) stamp.getLayoutParams()).topMargin = px(12);
+
+        LinearLayout audio = card(col, 14);
+        audio.addView(text("Giọng đọc tiếng Việt", 18, INK, true));
+        Button choose = button("Chọn giọng đọc", false);
+        Button preview = button("Đọc trạng thái hôm nay", false);
+        audio.addView(choose);
+        audio.addView(preview);
+        choose.setEnabled(false);
+        preview.setEnabled(false);
+        speech = new VietnameseSpeech(this, false, () -> {
+            choose.setEnabled(true);
+            preview.setEnabled(true);
+        });
+        choose.setOnClickListener(v -> chooseVoice());
+        preview.setOnClickListener(v -> previewVoice());
 
         // Công tắc báo
         LinearLayout ctl = card(col, 14);
@@ -168,6 +186,42 @@ public class MainActivity extends Activity {
     protected void onPause() {
         h.removeCallbacks(tick);
         super.onPause();
+    }
+
+    private void chooseVoice() {
+        List<Voice> voices = speech.voices();
+        if (voices.isEmpty()) {
+            previewVoice();
+            return;
+        }
+        String[] names = new String[voices.size() + 1];
+        names[0] = "Tự động (tiếng Việt)";
+        int selected = 0;
+        for (int i = 0; i < voices.size(); i++) {
+            names[i + 1] = voices.get(i).getName();
+            if (names[i + 1].equals(speech.selected())) selected = i + 1;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Chọn giọng đọc tiếng Việt")
+                .setSingleChoiceItems(names, selected, (dialog, index) -> {
+                    speech.select(index == 0 ? "" : names[index]);
+                    dialog.dismiss();
+                    previewVoice();
+                })
+                .setNegativeButton("Đóng", null)
+                .show();
+    }
+
+    private void previewVoice() {
+        if (!speech.speak(VietnameseSpeech.today())) {
+            Toast.makeText(this, "Cài dữ liệu giọng tiếng Việt trong mục Chuyển văn bản thành giọng nói của Android.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (speech != null) speech.close();
+        super.onDestroy();
     }
 
     private void refreshAll() {
