@@ -49,18 +49,19 @@ git tag v1.0.1
 git push origin v1.0.1
 ```
 
-### Cài secrets (bắt buộc để phát hành)
+### Cài secret (bắt buộc để phát hành)
 
-Vào **Settings › Secrets and variables › Actions › New repository secret** và tạo các secret:
+Khoá ký nằm trong repo ở dạng **đã mã hoá AES-256** ([`signing/release-keystore.enc`](signing/)). Chỉ cần **1 secret**:
+
+Vào **Settings › Secrets and variables › Actions › New repository secret**:
 
 | Tên | Giá trị |
 |---|---|
-| `KEYSTORE_BASE64` | Nội dung file khoá `.jks` mã hoá base64 (`base64 -w0 release.jks`) |
-| `KEYSTORE_PASSWORD` | Mật khẩu kho khoá |
-| `KEY_ALIAS` | Bí danh khoá |
-| `KEY_PASSWORD` | Mật khẩu khoá (không bắt buộc – bỏ trống thì dùng `KEYSTORE_PASSWORD`) |
+| `KEYSTORE_PASSWORD` | Mật khẩu kho khoá (32 ký tự) |
 
-Mọi bản phát hành phải ký cùng một khoá thì điện thoại mới cập nhật đè lên được. Không đưa file `.jks` lên repo.
+`KEY_ALIAS` (mặc định `tn`), `KEY_PASSWORD` (mặc định bằng `KEYSTORE_PASSWORD`) là tuỳ chọn. Mọi bản phát hành phải ký cùng một khoá thì điện thoại mới cập nhật đè lên được. Không đưa file `.jks` chưa mã hoá lên repo.
+
+Nếu mật khẩu sai, log của bước **"Chuẩn bị khoá ký phát hành"** in ra độ dài và mã băm rút gọn của giá trị đã dán để dễ kiểm tra (không lộ nội dung).
 
 ## Dựng trên máy
 
@@ -82,5 +83,6 @@ app/src/main/java/vn/tamnuong/baothuc/
   AlarmActivity.java  Màn hình báo thức đè màn hình khoá
   MainActivity.java   Màn hình chính
 tools/tao_lich_ics.py Tạo file lịch .ics
+signing/              Khoá ký đã mã hoá
 app/src/test/...      Unit test (Tết 2026/2027/2030, tháng nhuận, 307 ngày Tam Nương, giờ báo)
 ```
